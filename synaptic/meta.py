@@ -113,7 +113,7 @@ class Metadata:
         # -- The listConnections call gives us a flat array, but its actually
         # -- a one dimensional array of double data. So iterate over it in
         # -- twos
-        for idx in range(0, len(connections), 2):
+        for idx in range(0, len(connection_info), 2):
 
             # -- Get the target attribute, and specifically look
             # -- for the host attribute. If that is not present
