@@ -36,7 +36,7 @@ class Metadata:
         the Metadata.get(label) and Metadata.set(label, value)
 
         Internally these are stored in persistentData and transientData as a json
-        serialised string. Typically you should not access these _Attributes directly,
+        serialised string. Typically, you should not access these _Attributes directly,
         instead you should use the .get and .set methods shown below. The reasoning for
         this is that the .set will only ever set data in the transientData attribute
         when the node is referenced. This ensures that any data that is set when
@@ -59,6 +59,7 @@ class Metadata:
     identifier = ""
     version = 1.0
 
+    _NODE_NAME = "SYNAPTIC_METANODE"
     _TAG_PREFIX = "usertag"
 
     # ----------------------------------------------------------------------------------
@@ -129,7 +130,7 @@ class Metadata:
         """
         
         # -- Create the network node
-        meta_node = mc.createNode("network")
+        meta_node = mc.createNode("network", name=cls._NODE_NAME + '#')
         
         # -- Add the attribute we use to ensure its a synapitic metanode
         mc.addAttr(
