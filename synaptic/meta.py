@@ -130,7 +130,7 @@ class Metadata:
         """
         
         # -- Create the network node
-        meta_node = mc.createNode("network", name=cls._NODE_NAME + '#')
+        meta_node = mc.createNode("network", name=cls._NODE_NAME + '#', skipSelect=True)
         
         # -- Add the attribute we use to ensure its a synapitic metanode
         mc.addAttr(
