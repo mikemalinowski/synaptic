@@ -36,7 +36,7 @@ class Metadata:
         the Metadata.get(label) and Metadata.set(label, value)
 
         Internally these are stored in persistentData and transientData as a json
-        serialised string. Typically you should not access these _Attributes directly,
+        serialised string. Typically, you should not access these _Attributes directly,
         instead you should use the .get and .set methods shown below. The reasoning for
         this is that the .set will only ever set data in the transientData attribute
         when the node is referenced. This ensures that any data that is set when
@@ -59,6 +59,7 @@ class Metadata:
     identifier = ""
     version = 1.0
 
+    _NODE_NAME = "SYNAPTIC_METANODE"
     _TAG_PREFIX = "usertag"
 
     # ----------------------------------------------------------------------------------
@@ -89,43 +90,27 @@ class Metadata:
         Returns:
             str: The name of the metanode (network node)
         """
-        # -- Get a list of all the message connections. This is because when
-        # -- a meta node is created it ties itself to the message attribute
-        # -- of the node it represents
-        connections = mc.listConnections(f"{host}.message")
-
-        # -- If there is no connection then there is nothing
-        # -- more we can do
-        if not connections:
-            return ""
-
-        # -- Now that we know there is a conenction, we want to look explicitely
-        # -- for the plug data, as we only want to find one that has a host
-        # -- connection
-        connection_info = mc.listConnections(
+        # -- We want to look explicitly for the receiving plug data, as we
+        # -- only want to find the first one that has a host connection.
+        all_plugs = mc.listConnections(
             f"{host}.message",
             source=False,
             destination=True,
             connections=True,
             plugs=True,
         )
+        if not all_plugs:
+            return ""
 
         # -- The listConnections call gives us a flat array, but its actually
         # -- a one dimensional array of double data. So iterate over it in
         # -- twos
-        for idx in range(0, len(connections), 2):
+        for target_attr in all_plugs[1::2]:
+            if target_attr.endswith('.host'):
 
-            # -- Get the target attribute, and specifically look
-            # -- for the host attribute. If that is not present
-            # -- then continue on
-            target_attr = connection_info[idx + 1]
-
-            if ".host" not in target_attr:
-                continue
-
-            # -- We have a valid connection - so extract the metanode
-            # -- name from it
-            return target_attr.split(".")[0]
+                # -- We have a valid connection - so extract the metanode
+                # -- name from it
+                return target_attr.rsplit('.', 1)[0]
 
         return ""
 
@@ -145,7 +130,7 @@ class Metadata:
         """
         
         # -- Create the network node
-        meta_node = mc.createNode("network")
+        meta_node = mc.createNode("network", name=cls._NODE_NAME + '#', skipSelect=True)
         
         # -- Add the attribute we use to ensure its a synapitic metanode
         mc.addAttr(
@@ -292,7 +277,7 @@ class Metadata:
     def tag(self, tag_name: str, target: str) -> None:
         """
         This allows you to tag another node in the scene graph. This allows you to 
-        retireve that node using a tag name rather than the actual objects name. 
+        retrieve that node using a tag name rather than the actual objects name.
         
         This is useful for many situations. An example might be to tag all the deformers
         which make up part of a rig. By using tags to define object relative look up's 
@@ -307,12 +292,15 @@ class Metadata:
         Returns:
             None
         """
-        # -- Pre-append the tag name with out tagging prefix
+        # -- Pre-append the tag name without tagging prefix
         tag_name = self._TAG_PREFIX + tag_name
         meta_name = pointer.get_name(self._meta_pointer)
 
+        # -- Store the node + attribute name to avoid reformatting each time
+        attribute_fullpath = f"{meta_name}.{tag_name}"
+
         # -- Add the attribute
-        if not mc.objExists(f"{meta_name}.{tag_name}"):
+        if not mc.objExists(attribute_fullpath):
             mc.addAttr(
                 meta_name,
                 shortName=tag_name,
@@ -322,7 +310,7 @@ class Metadata:
 
         try:
             next_index = mc.getAttr(
-                f"{meta_name}.{tag_name}",
+                attribute_fullpath,
                 multiIndices=True,
             )[-1] + 1
 
@@ -331,7 +319,7 @@ class Metadata:
 
         mc.connectAttr(
             f"{target}.message",
-            f"{meta_name}.{tag_name}[{next_index}]",
+            f"{attribute_fullpath}[{next_index}]",
             force=True,
         )
 
@@ -348,19 +336,22 @@ class Metadata:
         Returns:
             None
         """
-        # -- Pre-append the tag name with out tagging prefix
+        # -- Pre-append the tag name without tagging prefix
         tag_name = self._TAG_PREFIX + tag_name
 
         # -- Get the name of the meta node from the pointer
         meta_name = pointer.get_name(self._meta_pointer)
 
+        # -- Store the node + attribute name to avoid reformatting each time
+        attribute_fullpath = f"{meta_name}.{tag_name}"
+
         # -- Add the attribute does not exist, we have no nodes
         # -- to collate
-        if not mc.objExists(f"{meta_name}.{tag_name}"):
+        if not mc.objExists(attribute_fullpath):
             return
 
         connection_info = mc.listConnections(
-            f"{meta_name}.{tag_name}",
+            attribute_fullpath,
             source=True,
             destination=False,
             connections=True,
@@ -374,7 +365,7 @@ class Metadata:
             meta_attr = connection_info[idx]
             target_attr = connection_info[idx + 1]
 
-            if target_attr.split(".")[0] == target:
+            if target_attr.rsplit(".", 1)[0] == target:
                 mc.disconnectAttr(
                     target_attr,
                     meta_attr,
@@ -397,15 +388,18 @@ class Metadata:
         # -- Get the name of the meta node from the pointer
         meta_name = pointer.get_name(self._meta_pointer)
 
+        # -- Store the node + attribute name to avoid reformatting each time
+        attribute_fullpath = f"{meta_name}.{tag_name}"
+
         # -- Add the attribute does not exist, we have no nodes
         # -- to collate
-        if not mc.objExists(f"{meta_name}.{tag_name}"):
+        if not mc.objExists(attribute_fullpath):
             return list()
 
         return list(
             set(
                 mc.listConnections(
-                    f"{meta_name}.{tag_name}",
+                    attribute_fullpath,
                     source=True,
                     destination=False,
                 ) or list(),
