@@ -306,21 +306,14 @@ class Metadata:
                 shortName=tag_name,
                 at="message",
                 multi=True,
+                indexMatters=False,
             )
-
-        try:
-            next_index = mc.getAttr(
-                attribute_fullpath,
-                multiIndices=True,
-            )[-1] + 1
-
-        except (TypeError, IndexError):
-            next_index = 0
 
         mc.connectAttr(
             f"{target}.message",
-            f"{attribute_fullpath}[{next_index}]",
+            attribute_fullpath,
             force=True,
+            nextAvailable=True,
         )
 
     # ----------------------------------------------------------------------------------
