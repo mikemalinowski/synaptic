@@ -261,8 +261,10 @@ class Metadata:
         # -- transient settings to overlay on top of the persistent data
         try:
             all_data.update(
-                mc.getAttr(
-                    f"{meta_name}.{_Attributes.TRANSIENT_DATA}",
+                json.loads(
+                    mc.getAttr(
+                        f"{meta_name}.{_Attributes.TRANSIENT_DATA}",
+                    ),
                 ),
             )
 
